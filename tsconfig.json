@@ -1,0 +1,60 @@
+{
+    "compilerOptions": {
+        "lib": [
+            "ES2020",
+            "DOM"
+        ],
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "sourceMap": true,
+        "allowSyntheticDefaultImports": true,
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": true,
+        "module": "ESNext",
+        "moduleResolution": "Node",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": false,
+        "jsx": "react-jsx",
+        "baseUrl": ".",
+        "paths": {
+            "@components/*": [
+                "src/components/*"
+            ],
+            "@layout/*": [
+                "src/layout/*"
+            ],
+            "@pages/*": [
+                "src/pages/*"
+            ],
+            "@hooks/*": [
+                "src/hooks/*"
+            ],
+            "@services/*": [
+                "src/services/*"
+            ],
+            "@app-types/*": [
+                "src/types/*"
+            ],
+            "@utils/*": [
+                "src/utils/*"
+            ],
+            "@/*": [
+                "src/*"
+            ]
+        }
+    },
+    "ts-node": {
+        "compilerOptions": {
+            "module": "commonjs",
+            "moduleResolution": "Node",
+            "target": "es5",
+            "esModuleInterop": true
+        }
+    },
+    "include": [
+        "src/**/*",
+        "webpack.config.ts"
+    ]
+}

@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { NewsItem } from '../types/coin';
-import { translateToKorean } from './translate';
 
 /**
  * 코인 심볼별 Cointelegraph 태그 매핑

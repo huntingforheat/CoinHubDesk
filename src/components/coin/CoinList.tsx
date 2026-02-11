@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useCoinData } from '../../hooks/useCoinData';
 import { CoinData } from '../../types/coin';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +7,10 @@ interface CoinListProps {
     onSelect?: (coin: CoinData) => void;
     selectedMarket?: string;
     currencyMode?: 'KRW' | 'USD';
+    isCompact?: boolean; // 컴팩트 모드 (화면 분할 시 사용)
+    onPageChange?: (page: number) => void;
 }
+
 
 type PageSize = 30 | 50 | 100 | 'all';
 type SortField = 'price' | 'change' | 'trade' | 'kimchi' | 'none';
@@ -18,12 +21,7 @@ interface SortConfig {
     order: SortOrder;
 }
 
-/**
- * 실시간 코인 목록을 렌더링하는 메인 컴포넌트 (페이지네이션 및 정렬 포함)
- * @param {CoinListProps} props 선택 핸들러 및 현재 선택된 마켓 코드
- * @returns {React.JSX.Element}
- */
-const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListProps): React.JSX.Element => {
+const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW', onPageChange }: CoinListProps): React.JSX.Element => {
     const { coins, exchangeRate, loading, error } = useCoinData();
     const navigate = useNavigate();
 
@@ -33,6 +31,9 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
 
     // 정렬 상태
     const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'trade', order: 'desc' });
+
+    // 컨테이너 Ref
+    const tableRef = useRef<HTMLTableElement>(null);
 
     // 정렬 로직이 적용된 코인 목록 계산
     const sortedCoins = useMemo(() => {
@@ -94,6 +95,8 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
         setCurrentPage(page);
         // 페이지 변경 시 리스트 상단으로 부드럽게 이동
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        onPageChange?.(page);
     };
 
     // 페이지 크기 변경 시 핸들러
@@ -188,28 +191,34 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
 
             {/* 테이블 영역 */}
             <div className="overflow-x-auto rounded-2xl border border-base-300 shadow-2xl bg-base-200/40 backdrop-blur-sm">
-                <table className="table table-xs md:table-md w-full border-collapse">
+                {/* 
+                    table-fixed: 데이터 내용(긴 텍스트 등)에 의해 컬럼 너비가 변하지 않고, 
+                    지정된 w-[check] 클래스를 강제로 따르도록 합니다.
+                    이로 인해 30/50/100/전체 보기 시 레이아웃이 동일하게 유지됩니다.
+                */}
+                <table className="table table-xs md:table-md w-full border-collapse table-fixed">
                     <thead>
                         <tr className="bg-base-300/80 text-base-content/80 font-bold border-b border-base-300">
-                            {/* 종목명 헤더 */}
-                            <th className="py-4 px-3 md:px-6">종목</th>
+                            {/* 
+                                각 컬럼에 고정 너비(w-[px])를 설정하여 데이터 양(30, 50, 100, 전체)에 상관없이 
+                                컬럼 위치가 일관되게 유지되도록 합니다. 
+                            */}
+                            <th className="py-4 px-3 md:px-6 w-[120px] md:w-[180px]">종목</th>
                             {[
-                                { label: '시세', field: 'price' as SortField },
-                                { label: '변동', field: 'change' as SortField },
-                                { label: '김프', field: 'kimchi' as SortField },
-                                { label: '거래대금', field: 'trade' as SortField },
+                                { label: '시세', field: 'price' as SortField, width: 'w-[90px] md:w-[150px]' },
+                                { label: '변동', field: 'change' as SortField, width: 'w-[80px] md:w-[120px]' },
+                                { label: '김프', field: 'kimchi' as SortField, width: 'w-[80px] md:w-[110px]' },
+                                { label: '거래대금', field: 'trade' as SortField, width: 'w-[90px] md:w-[140px]' },
                             ].map((header) => {
                                 const isActive = sortConfig.field === header.field;
                                 return (
-                                    // 정렬 가능한 헤더: 클릭 시 정렬 토글, 활성화 시 시각적 피드백 제공
                                     <th
                                         key={header.field}
-                                        className={`text-right py-4 px-3 md:px-6 cursor-pointer hover:bg-base-content/5 transition-colors group select-none ${isActive ? 'text-primary' : ''}`}
+                                        className={`text-right py-4 px-3 md:px-6 cursor-pointer hover:bg-base-content/5 transition-colors group select-none ${header.width} ${isActive ? 'text-primary' : ''}`}
                                         onClick={() => handleSort(header.field)}
                                     >
                                         <div className="flex items-center justify-end gap-1">
                                             {header.label}
-                                            {/* 정렬 방향 표시 (활성화 시 항상 보임, 비활성화 시 호버 시에만 약하게 보임) */}
                                             <span className={`text-[10px] transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'}`}>
                                                 {isActive && sortConfig.order === 'asc' ? '▲' : '▼'}
                                             </span>
@@ -227,7 +236,6 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
                             const sign: string = isRise ? '+' : '';
                             const isSelected = selectedMarket === coin.market;
 
-                            // 통화 모드에 따른 가격 및 심볼 설정
                             const displayPrice = currencyMode === 'KRW' ? coin.trade_price : coin.usd_price || 0;
                             const currencySymbol = currencyMode === 'KRW' ? '' : '$';
 
@@ -237,7 +245,8 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
                                     className={`hover:bg-primary/10 transition-all duration-200 cursor-pointer group ${isSelected ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}
                                     onClick={(e) => handleRowClick(e, coin)}
                                 >
-                                    <td className="py-4 px-3 md:px-6">
+                                    {/* 각 데이터 셀에도 헤더와 동일한 너비를 암시적으로 유지하거나 최소 너비를 보장합니다. */}
+                                    <td className="py-4 px-3 md:px-6 truncate">
                                         <div className="flex flex-col leading-tight min-w-[85px]">
                                             <span className={`font-black text-sm md:text-lg truncate mb-1 ${isSelected ? 'text-primary' : 'group-hover:text-primary transition-colors'}`}>
                                                 {coin.korean_name}
@@ -250,13 +259,13 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
                                             </div>
                                         </div>
                                     </td>
-                                    <td className={`text-right font-mono font-black text-sm md:text-xl px-3 md:px-6 ${colorClass} tabular-nums`}>
+                                    <td className={`text-right font-mono font-black text-sm md:text-xl px-3 md:px-6 ${colorClass} tabular-nums truncate`}>
                                         {currencySymbol}{displayPrice.toLocaleString(undefined, {
                                             minimumFractionDigits: currencyMode === 'USD' ? 2 : 0,
                                             maximumFractionDigits: currencyMode === 'USD' ? 2 : 0
                                         })}
                                     </td>
-                                    <td className={`text-right font-mono px-3 md:px-6 ${colorClass} tabular-nums`}>
+                                    <td className={`text-right font-mono px-3 md:px-6 ${colorClass} tabular-nums truncate`}>
                                         <div className="font-bold text-xs md:text-base">{sign}{(coin.signed_change_rate * 100).toFixed(2)}%</div>
                                         <div className="text-[10px] md:text-xs opacity-60 font-medium">
                                             {currencyMode === 'KRW'
@@ -266,7 +275,7 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
                                         </div>
                                     </td>
                                     {/* 김치프리미엄 컬럼 */}
-                                    <td className="text-right font-mono px-3 md:px-6">
+                                    <td className="text-right font-mono px-3 md:px-6 truncate">
                                         {coin.kimchi_premium !== undefined ? (
                                             <>
                                                 <div className={`font-bold text-xs md:text-base ${coin.kimchi_premium > 0 ? 'text-error' : 'text-info'}`}>
@@ -280,7 +289,7 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
                                             <span className="opacity-20">-</span>
                                         )}
                                     </td>
-                                    <td className="text-right font-mono px-3 md:px-6">
+                                    <td className="text-right font-mono px-3 md:px-6 truncate">
                                         <div className="text-xs md:text-base opacity-70 font-bold whitespace-nowrap tabular-nums">
                                             {currencyMode === 'KRW'
                                                 ? `${Math.floor(coin.acc_trade_price_24h / 1000000).toLocaleString()}만`
@@ -296,8 +305,8 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
             </div>
 
             {/* 하단 페이지네이션 UI */}
-            {pageSize !== 'all' && totalPages > 1 && (
-                <div className="flex justify-center mt-4">
+            <div className="flex justify-center items-center mt-4 min-h-[56px]">
+                {pageSize !== 'all' && totalPages > 1 && (
                     <div className="join shadow-lg border border-base-300 overflow-hidden rounded-xl">
                         <button
                             className="join-item btn btn-sm md:btn-md bg-base-200 border-none hover:bg-primary hover:text-white transition-all disabled:bg-base-100 disabled:opacity-30"
@@ -308,7 +317,6 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
                         </button>
                         {[...Array(totalPages)].map((_, i) => {
                             const pageNum = i + 1;
-                            // 현재 페이지 주변만 노출 로직 (선택사항, 데이터가 많을 경우 고려)
                             if (
                                 totalPages > 7 &&
                                 pageNum !== 1 &&
@@ -339,8 +347,8 @@ const CoinList = ({ onSelect, selectedMarket, currencyMode = 'KRW' }: CoinListPr
                             »
                         </button>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }

@@ -31,11 +31,12 @@ const Header = (): React.JSX.Element => {
                     onClick={handleLogoClick}
                 >
                     <span className="text-3xl group-hover:scale-110 transition-transform">💎</span>
-                    <span className="text-xl font-black text-primary tracking-tighter">COIN DASHBOARD</span>
+                    <span className="text-xl font-black text-primary tracking-tighter">CoinHubDesk</span>
                 </a>
             </div>
 
-            <div className="flex-none gap-4">
+            {/* 사용자 프로필 메뉴는 준비 중 */}
+            {/* <div className="flex-none gap-4">
                 <div className="dropdown dropdown-end">
                     <div
                         tabIndex={0}
@@ -47,7 +48,7 @@ const Header = (): React.JSX.Element => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> */}
         </header>
     );
 };

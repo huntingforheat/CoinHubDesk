@@ -30,7 +30,7 @@ export const fetchExchangeRate = async (): Promise<number> => {
         const response = await axios.get<ExchangeRateData>('https://open.er-api.com/v6/latest/USD');
         return response.data.rates.KRW;
     } catch (error) {
-        console.error('환율 정보를 가져오는데 실패했습니다:', error);
+        console.error('환율 정보를 가져오는데 실패했습니다:');
         return 1350; // 실패 시 기본 환율 (예비용)
     }
 };
@@ -53,7 +53,7 @@ export const fetchBinancePrices = async (): Promise<Record<string, number>> => {
 
         return priceMap;
     } catch (error) {
-        console.error('바이낸스 시세를 가져오는데 실패했습니다:', error);
+        console.error('바이낸스 시세를 가져오는데 실패했습니다:');
         return {};
     }
 };

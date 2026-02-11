@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { getCandles, getCandlesByTimeframe, TimeframeType } from '../../services/upbit';
 import { CoinData, Candle } from '../../types/coin';
 import CoinChart from './CoinChart';
-import { useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useCoinData } from '../../hooks/useCoinData';
 import CoinNews from './CoinNews';
 
 interface CoinDetailProps {
     initialData?: CoinData; // PC 버전에서 HomeLayout으로부터 직접 전달받는 코인 데이터
+    onClose?: () => void; // PC 버전에서 상세 창을 닫기 위한 콜백
 }
 
 /**
@@ -18,14 +19,45 @@ interface CoinDetailProps {
  * @param {CoinDetailProps} props 초기 데이터 (선택적)
  * @returns {React.JSX.Element}
  */
-const CoinDetail = ({ initialData }: CoinDetailProps): React.JSX.Element => {
+const CoinDetail = ({ initialData, onClose }: CoinDetailProps): React.JSX.Element => {
     const { item } = useParams<{ item: string }>(); // URL 파라미터에서 코인 심볼 추출 (예: BTC)
     const location = useLocation();
+    const navigate = useNavigate();
     const { coins } = useCoinData();
 
     // 시간봉 선택 상태
     const [selectedTimeframe, setSelectedTimeframe] = useState<TimeframeType>('minutes');
-    const [selectedUnit, setSelectedUnit] = useState<number>(1);
+    const [selectedUnit, setSelectedUnit] = useState<number>(15);
+
+    const tableRef = useRef<HTMLDivElement>(null);
+
+    // 데이터 결정 우선순위:
+    // 1. 실시간 데이터 (coins 배열에서 찾음) - 가격 변동 반영을 위해 가장 우선순위 높음
+    // 2. prop으로 직접 전달된 데이터 (PC 버전 초기 로드 시)
+    // 3. Link state를 통해 전달된 데이터 (모바일 라우팅 기반)
+
+    // 타겟 마켓 코드 결정
+    const targetMarket = item
+        ? (item.includes('-') ? item : `KRW-${item.toUpperCase()}`)
+        : initialData?.market;
+
+    // 실시간 데이터 검색
+    const liveCoin = coins.find(c => c.market === targetMarket);
+
+    // 최종 사용할 코인 데이터 (실시간 데이터 우선)
+    const coin = liveCoin || initialData || (location.state as CoinData);
+
+    // 캔들 데이터 조회 (1분봉, 3초 주기 갱신)
+    // coin이 있을 때만 조건부 호출
+    // SWR 키에 timeframe과 unit을 포함시켜 상태 변경 시 즉시 새로운 데이터를 요청하도록 함
+    const { data: candles, error } = useSWR<Candle[]>(
+        coin ? `candles/${coin.market}/${selectedTimeframe}/${selectedUnit}` : null,
+        () => getCandlesByTimeframe(coin.market, selectedTimeframe, selectedUnit, 200),
+        {
+            refreshInterval: 3000,
+            keepPreviousData: true // 데이터 로딩 중 이전 데이터 유지 (깜빡임 방지)
+        }
+    );
 
     const handleTypeChange = (type: TimeframeType) => {
         setSelectedTimeframe(type);
@@ -35,19 +67,24 @@ const CoinDetail = ({ initialData }: CoinDetailProps): React.JSX.Element => {
         setSelectedUnit(unit);
     };
 
-    // 데이터 결정 우선순위:
-    // 1. prop으로 직접 전달된 데이터 (PC 버전 상태 기반)
-    // 2. Link state를 통해 전달된 데이터 (모바일 라우팅 기반)
-    // 3. 새로고침 시 전체 코인 목록에서 해당 마켓 코드로 검색하여 복구
-    const coin = initialData || (location.state as CoinData) || coins.find(c => c.market.split('-')[1] === item?.toUpperCase());
+    const handleCoinChange = (coin: CoinData) => {
+        tableRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-    // 캔들 데이터 조회 (1분봉, 3초 주기 갱신)
-    // coin이 있을 때만 조건부 호출
-    const { data: candles, error } = useSWR<Candle[]>(
-        coin ? `candles/${coin.market}` : null,
-        () => getCandlesByTimeframe(coin.market, selectedTimeframe, selectedUnit, 200),
-        { refreshInterval: 3000 }
-    );
+    useEffect(() => {
+        if (coin) {
+            handleCoinChange(coin);
+        }
+    }, [initialData])
+
+    // 뒤로가기 핸들러 (PC에서는 닫기, 모바일에서는 홈 이동)
+    const handleBack = () => {
+        if (onClose) {
+            onClose();
+        } else {
+            navigate('/');
+        }
+    };
 
     if (!coin) return (
         <div className="flex flex-col items-center justify-center py-24 gap-4 bg-base-200/50 rounded-2xl border border-dashed border-base-300">
@@ -69,8 +106,19 @@ const CoinDetail = ({ initialData }: CoinDetailProps): React.JSX.Element => {
     const sign = isRise ? '+' : '';
 
     return (
-        <div className="card bg-base-200 shadow-xl border border-base-300 overflow-hidden">
+        <div ref={tableRef} className="card bg-base-200 shadow-xl border border-base-300 overflow-hidden">
             <div className="card-body p-4 md:p-8">
+                {/* 뒤로가기 버튼 */}
+                <button
+                    className="btn btn-sm btn-ghost mb-4 gap-2 pl-0 hover:bg-transparent hover:text-primary transition-colors w-fit"
+                    onClick={handleBack}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                    </svg>
+                    목록으로 돌아가기
+                </button>
+
                 {/* 상단 가격 요약 섹션 */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div className="flex flex-col">
@@ -117,11 +165,42 @@ const CoinDetail = ({ initialData }: CoinDetailProps): React.JSX.Element => {
                 {/* 실시간 캔들 차트 및 뉴스 그리드 */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                     {/* 차트 영역 - 2컬럼 차지 */}
-                    <div className="lg:col-span-3 bg-base-300 rounded-2xl p-4 min-h-[450px] flex flex-col items-center justify-center border border-base-content/5 shadow-inner">
+                    <div className="lg:col-span-3 bg-base-300 rounded-2xl p-4 min-h-[450px] flex flex-col border border-base-content/5 shadow-inner relative overflow-hidden">
                         {!candles ? (
-                            <div className="flex flex-col items-center gap-4">
-                                <span className="loading loading-spinner loading-lg text-primary"></span>
-                                <p className="text-sm font-medium opacity-40">데이터 동기화 중...</p>
+                            <div className="w-full h-full flex flex-col gap-4 animate-pulse">
+                                {/* 차트 헤더 스켈레톤 */}
+                                <div className="w-full flex justify-between items-center mb-2 px-2">
+                                    <div className="h-5 bg-base-content/10 rounded w-20"></div>
+                                    <div className="h-3 bg-base-content/5 rounded w-32"></div>
+                                </div>
+
+                                {/* 차트 영역 스켈레톤 - 캔들 모양 흉내 */}
+                                <div className="flex-1 w-full bg-base-content/5 rounded-lg relative overflow-hidden flex items-end justify-between px-4 pb-8 gap-2">
+                                    {[...Array(20)].map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className="w-full bg-base-content/10 rounded-sm"
+                                            style={{
+                                                height: `${Math.random() * 60 + 20}%`,
+                                                opacity: Math.random() * 0.5 + 0.3
+                                            }}
+                                        ></div>
+                                    ))}
+
+                                    {/* 그리드 라인 효과 */}
+                                    <div className="absolute inset-0 flex flex-col justify-between py-8 pointer-events-none">
+                                        {[...Array(5)].map((_, i) => (
+                                            <div key={i} className="w-full h-[1px] bg-base-content/5"></div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 하단 축 스켈레톤 */}
+                                <div className="w-full flex justify-between px-2">
+                                    {[...Array(6)].map((_, i) => (
+                                        <div key={i} className="h-3 bg-base-content/10 rounded w-8"></div>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
                             <>

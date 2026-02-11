@@ -21,8 +21,26 @@ const CoinNews = ({ symbol }: CoinNewsProps): React.JSX.Element => {
     );
 
     if (isLoading) return (
-        <div className="flex justify-center py-10">
-            <span className="loading loading-spinner loading-md text-primary"></span>
+        <div className="grid grid-cols-1 gap-4">
+            <h3 className="text-xl font-black mb-2 flex items-center gap-2 opacity-50">
+                <span className="w-2 h-6 bg-base-300 rounded-full"></span>
+                <span className="skeleton w-32 h-6"></span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+                {[1, 2, 3].map((idx) => (
+                    <div key={idx} className="card card-side bg-base-200/50 border border-base-content/5 overflow-hidden animate-pulse">
+                        <div className="w-32 h-full bg-base-300 flex-shrink-0"></div>
+                        <div className="card-body p-4 w-full">
+                            <div className="h-4 bg-base-300 rounded w-3/4 mb-2"></div>
+                            <div className="h-3 bg-base-300 rounded w-full mb-1"></div>
+                            <div className="h-3 bg-base-300 rounded w-1/2"></div>
+                            <div className="card-actions justify-end mt-2">
+                                <div className="h-2 bg-base-300 rounded w-16"></div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 

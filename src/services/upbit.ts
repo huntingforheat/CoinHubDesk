@@ -8,7 +8,7 @@ export const getMarkets = async (): Promise<Market[]> => {
         const response = await axios.get(`${BASE_URL}/market/all?isDetails=false`);
         return response.data;
     } catch (error) {
-        console.error('Error fetching markets:', error);
+        console.error('Error fetching markets:');
         throw error;
     }
 };
@@ -18,7 +18,7 @@ export const getTickers = async (markets: string): Promise<Ticker[]> => {
         const response = await axios.get(`${BASE_URL}/ticker?markets=${markets}`);
         return response.data;
     } catch (error) {
-        console.error('Error fetching tickers:', error);
+        console.error('Error fetching tickers:');
         throw error;
     }
 };
@@ -47,7 +47,7 @@ export const getCandles = async (
         const response = await axios.get(url);
         return response.data;
     } catch (error) {
-        console.error('Error fetching candles:', error);
+        console.error('Error fetching candles:');
         throw error;
     }
 };
@@ -98,7 +98,7 @@ export const getCandlesByTimeframe = async (
         const response = await axios.get(url);
         return response.data;
     } catch (error) {
-        console.error(`Error fetching ${type} candles:`, error);
+        console.error(`Error fetching ${type} candles:`);
         throw error;
     }
 };

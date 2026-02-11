@@ -73,8 +73,6 @@ export const getCoinNews = async (symbol: string): Promise<NewsItem[]> => {
             });
         }
 
-        console.log('22244: ', initialNewsItems.length);
-
 
         // 번역할 텍스트 추출 (제목 + 설명)
         const textsToTranslate = initialNewsItems.flatMap(item => [item.title, item.description]);
@@ -94,7 +92,7 @@ export const getCoinNews = async (symbol: string): Promise<NewsItem[]> => {
 
         return finalNewsItems;
     } catch (error) {
-        console.error("Failed to fetch news:", error);
+        console.error("Failed to fetch news:");
         return [];
     }
 };

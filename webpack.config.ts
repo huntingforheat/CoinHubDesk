@@ -4,6 +4,8 @@ import webpack, { Configuration as WebpackConfiguration } from "webpack";
 import { Configuration as WebpackDevServerConfiguration } from "webpack-dev-server";
 // import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+
 interface Configuration extends WebpackConfiguration {
     devServer?: WebpackDevServerConfiguration;
 }
@@ -86,11 +88,15 @@ const config: Configuration = {
             NODE_ENV: isDevelopment ? 'development' : 'production',
             HUGGINGFACE_ACCESS_TOKEN: process.env.HUGGINGFACE_ACCESS_TOKEN || ''
         }),
+        new HtmlWebpackPlugin({
+            template: './public/index.html',
+        }),
     ],
     output: {
         path: path.join(__dirname, 'dist'),
-        filename: '[name].js',
-        publicPath: '/dist/',
+        filename: '[name].[contenthash].js',
+        publicPath: '/',
+        clean: true,
     },
     devServer: {
         // 활성화시 싱글페이지에서 /login, /signup등 가짜 주소를 만들어서 서버로 보내줌
